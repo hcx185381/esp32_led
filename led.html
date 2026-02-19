@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>远程 LED 控制</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        .button { padding: 15px 32px; font-size: 20px; margin: 10px; border: none; border-radius: 5px; color: white; }
+        .on { background-color: #4CAF50; }
+        .off { background-color: #f44336; }
+        .status { font-size: 24px; margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>ESP32 远程控制</h1>
+    <p class="status">LED 状态: <span id="ledStatus">未知</span></p>
+    <button class="button on" id="btnOn">打开 LED</button>
+    <button class="button off" id="btnOff">关闭 LED</button>
+    <p id="connectionStatus">连接状态: 连接中...</p>
+
+    <script>
+        // MQTT 配置
+        const brokerUrl = 'wss://broker-cn.emqx.io:8084/mqtt';
+        const options = {
+            clean: true,
+            connectTimeout: 4000,
+            clientId: 'web_' + Math.random().toString(16).substr(2, 8)
+        };
+        const controlTopic = 'esp32/led/control';
+        const statusTopic = 'esp32/led/status';
+
+        const client = mqtt.connect(brokerUrl, options);
+        const ledStatusSpan = document.getElementById('ledStatus');
+        const connStatusP = document.getElementById('connectionStatus');
+
+        client.on('connect', function () {
+            connStatusP.innerText = '连接状态: ✅ 已连接';
+            client.subscribe(statusTopic);
+            // 可发送查询指令
+        });
+
+        client.on('message', function (topic, message) {
+            if (topic === statusTopic) {
+                const value = message.toString();
+                ledStatusSpan.innerText = (value === '1') ? '开启' : '关闭';
+            }
+        });
+
+        client.on('error', function (err) {
+            connStatusP.innerText = '连接状态: ❌ 错误';
+            console.error(err);
+        });
+
+        client.on('close', function () {
+            connStatusP.innerText = '连接状态: ⚠️ 断开';
+        });
+
+        document.getElementById('btnOn').addEventListener('click', function () {
+            client.publish(controlTopic, '1');
+        });
+        document.getElementById('btnOff').addEventListener('click', function () {
+            client.publish(controlTopic, '2');
+        });
+    </script>
+</body>
+</html>
