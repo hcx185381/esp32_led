@@ -139,11 +139,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
       if (!playingMusic) {
         setLed(true);
       }
+      client.publish(mqtt_topic_status, "1");   // 新增：发布状态
     } else if (cmd == '2') {
       ledStatus = false;
       if (!playingMusic) {
         setLed(false);
       }
+      client.publish(mqtt_topic_status, "2");   // 新增：发布状态
     } else if (cmd == '3') {
       startMusic();
     }
@@ -166,6 +168,7 @@ void stopMusic() {
   noTone(BUZZER_PIN);
   // 根据 ledStatus 恢复 LED
   setLed(ledStatus);
+  client.publish(mqtt_topic_status, ledStatus ? "1" : "2");   // 新增：发布恢复后的状态
   Serial.println("音乐播放结束");
 }
 
