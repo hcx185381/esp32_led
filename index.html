@@ -1,24 +1,167 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>远程 LED 控制</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESP32 时尚控制台</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        body { font-family: Arial; text-align: center; margin-top: 50px; }
-        .button { padding: 15px 32px; font-size: 20px; margin: 10px; border: none; border-radius: 5px; color: white; }
-        .on { background-color: #4CAF50; }
-        .off { background-color: #f44336; }
-        .status { font-size: 24px; margin: 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            padding: 35px 25px;
+            width: 100%;
+            max-width: 420px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            background: linear-gradient(to right, #fff, #a8ede0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .status-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 100px;
+            padding: 20px 25px;
+            margin: 25px 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .status-label {
+            font-size: 1.2rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+        .status-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-value::before {
+            content: "";
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 14px;
+            background-color: #f44336;
+            box-shadow: 0 0 8px #f44336;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .status-value.on::before {
+            background-color: #4CAF50;
+            box-shadow: 0 0 12px #4CAF50;
+        }
+        .connection-badge {
+            font-size: 0.9rem;
+            text-align: center;
+            margin: 10px 0 25px;
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 40px;
+            display: inline-block;
+            width: auto;
+            margin-left: auto;
+            margin-right: auto;
+            backdrop-filter: blur(4px);
+        }
+        .button-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+        .btn {
+            flex: 1 1 130px;
+            padding: 18px 10px;
+            border: none;
+            border-radius: 60px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+        }
+        .btn:hover {
+            transform: translateY(-4px);
+            filter: brightness(1.1);
+        }
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .btn-on {
+            background: linear-gradient(145deg, #2e7d32, #4CAF50);
+        }
+        .btn-off {
+            background: linear-gradient(145deg, #b71c1c, #f44336);
+        }
+        .btn-music {
+            background: linear-gradient(145deg, #bf360c, #FF9800);
+        }
+        .footer-note {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            opacity: 0.5;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 18px;
+        }
     </style>
 </head>
 <body>
-    <h1>ESP32 远程控制</h1>
-    <p class="status">LED 状态: <span id="ledStatus">未知</span></p>
-    <button class="button on" id="btnOn">打开 LED</button>
-    <button class="button off" id="btnOff">关闭 LED</button>
-    <p id="connectionStatus">连接状态: 连接中...</p>
+    <div class="card">
+        <h1>ESP32 智能控制</h1>
+
+        <div class="status-container">
+            <span class="status-label">LED 状态</span>
+            <span class="status-value" id="ledStatus">关闭</span>
+        </div>
+
+        <div class="connection-badge" id="connectionStatus">
+            ⏳ 连接中...
+        </div>
+
+        <div class="button-grid">
+            <button class="btn btn-on" id="btnOn">🔆 打开 LED</button>
+            <button class="btn btn-off" id="btnOff">❌ 关闭 LED</button>
+            <button class="btn btn-music" id="btnMusic">🎵 播放音乐</button>
+        </div>
+
+        <div class="footer-note">
+            ✨ 实时控制 · 远程音乐
+        </div>
+    </div>
 
     <script>
         // MQTT 配置
@@ -35,33 +178,61 @@
         const ledStatusSpan = document.getElementById('ledStatus');
         const connStatusP = document.getElementById('connectionStatus');
 
+        // 辅助函数：更新 LED 指示器样式
+        function updateLedUI(value) {
+            const isOn = (value === '1');
+            ledStatusSpan.innerText = isOn ? '开启' : '关闭';
+            if (isOn) {
+                ledStatusSpan.classList.add('on');
+            } else {
+                ledStatusSpan.classList.remove('on');
+            }
+        }
+
         client.on('connect', function () {
-            connStatusP.innerText = '连接状态: ✅ 已连接';
-            client.subscribe(statusTopic);
-            // 可发送查询指令
+            console.log('MQTT 连接成功');
+            connStatusP.innerText = '✅ 已连接';
+            client.subscribe(statusTopic, function (err) {
+                if (!err) {
+                    console.log('已订阅状态主题');
+                } else {
+                    console.error('订阅失败', err);
+                }
+            });
         });
 
         client.on('message', function (topic, message) {
+            // ★ 关键调试输出：在控制台能看到收到的原始消息
+            console.log('收到消息, 主题:', topic, '内容:', message.toString());
             if (topic === statusTopic) {
                 const value = message.toString();
-                ledStatusSpan.innerText = (value === '1') ? '开启' : '关闭';
+                updateLedUI(value);
             }
         });
 
         client.on('error', function (err) {
-            connStatusP.innerText = '连接状态: ❌ 错误';
-            console.error(err);
+            console.error('MQTT 错误:', err);
+            connStatusP.innerText = '❌ 连接错误';
         });
 
         client.on('close', function () {
-            connStatusP.innerText = '连接状态: ⚠️ 断开';
+            console.log('MQTT 连接关闭');
+            connStatusP.innerText = '⚠️ 断开连接';
         });
 
         document.getElementById('btnOn').addEventListener('click', function () {
+            console.log('发送开灯指令');
             client.publish(controlTopic, '1');
         });
+
         document.getElementById('btnOff').addEventListener('click', function () {
+            console.log('发送关灯指令');
             client.publish(controlTopic, '2');
+        });
+
+        document.getElementById('btnMusic').addEventListener('click', function () {
+            console.log('发送播放音乐指令');
+            client.publish(controlTopic, '3');
         });
     </script>
 </body>
