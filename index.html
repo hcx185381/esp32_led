@@ -174,7 +174,9 @@
         const options = {
             clean: true,
             connectTimeout: 4000,
-            clientId: 'web_' + Math.random().toString(16).substr(2, 8)
+            clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+            username: 'esp32user',       // 添加用户名
+            password: 'hcx185381'        // 添加密码
         };
         const controlTopic = 'esp32/led/control';
         const statusTopic = 'esp32/led/status';
